@@ -640,6 +640,344 @@
       <img id="lightbox-img" src="" alt="Test Case Preview" />
     </div>
 
- 
+    <script>
+      const carouselSlide = document.querySelector(".carousel-slide");
+      const carouselCards = document.querySelectorAll(".carousel-card");
+      const dots = document.querySelectorAll(".carousel-dot");
+
+      let currentIndex = 0;
+      const totalCards = carouselCards.length;
+      let startX = 0;
+      let currentX = 0;
+      let isDragging = false;
+      let dragThreshold = 50; // Minimum drag distance to trigger slide change
+
+      function updateCarousel() {
+        // Update active card styling
+        carouselCards.forEach((card, index) => {
+          card.classList.remove("active");
+          if (index === currentIndex) {
+            card.classList.add("active");
+          }
+        });
+
+        // Calculate position to center the active card
+        const cardWidth = carouselCards[0].offsetWidth + 32; // Include gap
+        const containerWidth =
+          document.querySelector(".carousel-wrapper").offsetWidth;
+        const slideWidth = carouselSlide.scrollWidth;
+
+        let translateX;
+
+        if (window.innerWidth <= 768) {
+          // On mobile, center the active card
+          // First calculate how much of the card is visible beyond container
+          const visibleCardWidth = Math.min(cardWidth, containerWidth);
+          const offset = (containerWidth - visibleCardWidth) / 2;
+          translateX = -currentIndex * cardWidth + offset;
+
+          // Ensure we don't scroll past the beginning or end
+          const maxTranslate = -(slideWidth - containerWidth);
+          translateX = Math.max(Math.min(translateX, 0), maxTranslate);
+        } else {
+          // On desktop, center the active card
+          const offset = (containerWidth - cardWidth) / 2;
+          translateX = -currentIndex * cardWidth + offset;
+
+          // Ensure we don't scroll past the beginning or end
+          const maxTranslate = -(slideWidth - containerWidth);
+          translateX = Math.max(Math.min(translateX, 0), maxTranslate);
+        }
+
+        carouselSlide.style.transform = `translateX(${translateX}px)`;
+        carouselSlide.style.transition = isDragging
+          ? "none"
+          : "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
+
+        // Update dots
+        dots.forEach((dot, index) => {
+          dot.classList.toggle("active", index === currentIndex);
+        });
+      }
+
+      function nextSlide() {
+        currentIndex = (currentIndex + 1) % totalCards;
+        updateCarousel();
+      }
+
+      function prevSlide() {
+        currentIndex = (currentIndex - 1 + totalCards) % totalCards;
+        updateCarousel();
+      }
+
+      function goToSlide(index) {
+        currentIndex = index;
+        updateCarousel();
+      }
+
+      // Event Listeners for dots
+      dots.forEach((dot, index) => {
+        dot.addEventListener("click", () => goToSlide(index));
+      });
+
+      // Touch events for swipe functionality
+      carouselSlide.addEventListener("touchstart", (e) => {
+        startX = e.touches[0].clientX;
+        currentX = startX;
+        isDragging = true;
+        carouselSlide.style.transition = "none";
+      });
+
+      carouselSlide.addEventListener("touchmove", (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        currentX = e.touches[0].clientX;
+
+        // Calculate drag distance
+        const dragDistance = currentX - startX;
+
+        // Apply drag effect
+        const cardWidth = carouselCards[0].offsetWidth + 32;
+        const containerWidth =
+          document.querySelector(".carousel-wrapper").offsetWidth;
+        const offset =
+          window.innerWidth <= 768
+            ? (containerWidth - Math.min(cardWidth, containerWidth)) / 2
+            : (containerWidth - cardWidth) / 2;
+        const baseTranslateX = -currentIndex * cardWidth + offset;
+
+        // Apply drag offset with easing
+        carouselSlide.style.transform = `translateX(${
+          baseTranslateX + dragDistance
+        }px)`;
+      });
+
+      carouselSlide.addEventListener("touchend", (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+
+        const dragDistance = currentX - startX;
+
+        // Determine if swipe was significant enough
+        if (Math.abs(dragDistance) > dragThreshold) {
+          if (dragDistance > 0) {
+            // Swipe right - go to previous slide
+            prevSlide();
+          } else {
+            // Swipe left - go to next slide
+            nextSlide();
+          }
+        } else {
+          // Not enough drag, return to current slide
+          updateCarousel();
+        }
+      });
+
+      // Mouse drag support for desktop
+      carouselSlide.addEventListener("mousedown", (e) => {
+        startX = e.clientX;
+        currentX = startX;
+        isDragging = true;
+        carouselSlide.style.transition = "none";
+        e.preventDefault();
+      });
+
+      document.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        currentX = e.clientX;
+
+        // Calculate drag distance
+        const dragDistance = currentX - startX;
+
+        // Apply drag effect
+        const cardWidth = carouselCards[0].offsetWidth + 32;
+        const containerWidth =
+          document.querySelector(".carousel-wrapper").offsetWidth;
+        const offset =
+          window.innerWidth <= 768
+            ? (containerWidth - Math.min(cardWidth, containerWidth)) / 2
+            : (containerWidth - cardWidth) / 2;
+        const baseTranslateX = -currentIndex * cardWidth + offset;
+
+        // Apply drag offset with easing
+        carouselSlide.style.transform = `translateX(${
+          baseTranslateX + dragDistance
+        }px)`;
+      });
+
+      document.addEventListener("mouseup", (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+
+        const dragDistance = currentX - startX;
+
+        // Determine if drag was significant enough
+        if (Math.abs(dragDistance) > dragThreshold) {
+          if (dragDistance > 0) {
+            // Drag right - go to previous slide
+            prevSlide();
+          } else {
+            // Drag left - go to next slide
+            nextSlide();
+          }
+        } else {
+          // Not enough drag, return to current slide
+          updateCarousel();
+        }
+      });
+
+      // Prevent text selection while dragging
+      carouselSlide.addEventListener("selectstart", (e) => {
+        if (isDragging) {
+          e.preventDefault();
+        }
+      });
+
+      // Lightbox functionality
+      const lightbox = document.getElementById("lightbox");
+      const lightboxImg = document.getElementById("lightbox-img");
+
+      document.querySelectorAll(".carousel-card img").forEach((img) => {
+        img.addEventListener("click", () => {
+          lightboxImg.src = img.src;
+          lightbox.style.display = "flex";
+        });
+      });
+
+      lightbox.addEventListener("click", () => {
+        lightbox.style.display = "none";
+      });
+
+      // Smooth scroll for navigation
+      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+        anchor.addEventListener("click", function (e) {
+          if (this.getAttribute("href").startsWith("#")) {
+            e.preventDefault();
+            const targetId = this.getAttribute("href");
+            if (targetId === "#") return;
+
+            const targetElement = document.querySelector(targetId);
+            if (targetElement) {
+              const headerOffset = 80;
+              const elementPosition = targetElement.offsetTop;
+              const offsetPosition = elementPosition - headerOffset;
+
+              window.scrollTo({
+                top: offsetPosition,
+                behavior: "smooth",
+              });
+            }
+          }
+        });
+      });
+
+      // Initialize carousel on load and resize
+      window.addEventListener("load", updateCarousel);
+      window.addEventListener("resize", updateCarousel);
+
+      // Animate proficiency bars on scroll
+      function animateProficiencyBars() {
+        const proficiencyBars = document.querySelectorAll(".proficiency-fill");
+        proficiencyBars.forEach((bar) => {
+          const width = bar.style.width;
+          bar.style.width = "0%";
+          setTimeout(() => {
+            bar.style.width = width;
+          }, 300);
+        });
+      }
+
+      // Observe when skills section comes into view
+      const skillsSection = document.getElementById("about");
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              animateProficiencyBars();
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.3 }
+      );
+
+      observer.observe(skillsSection);
+
+      // Burger menu toggle
+      const burger = document.getElementById("burger");
+      const navLinks = document.getElementById("nav-links");
+      const mobileOverlay = document.getElementById("mobileOverlay");
+
+      burger.addEventListener("click", () => {
+        navLinks.classList.toggle("active");
+        burger.classList.toggle("toggle");
+        mobileOverlay.classList.toggle("active");
+        document.body.classList.toggle("menu-open");
+      });
+
+      // Close menu when clicking overlay
+      mobileOverlay.addEventListener("click", () => {
+        navLinks.classList.remove("active");
+        burger.classList.remove("toggle");
+        mobileOverlay.classList.remove("active");
+        document.body.classList.remove("menu-open");
+      });
+
+      // Close menu when clicking a link
+      document.querySelectorAll(".header-nav nav a").forEach((link) => {
+        link.addEventListener("click", () => {
+          navLinks.classList.remove("active");
+          burger.classList.remove("toggle");
+          mobileOverlay.classList.remove("active");
+          document.body.classList.remove("menu-open");
+        });
+      });
+
+      // Close menu on window resize (if resized to desktop)
+      window.addEventListener("resize", () => {
+        if (window.innerWidth > 768) {
+          navLinks.classList.remove("active");
+          burger.classList.remove("toggle");
+          mobileOverlay.classList.remove("active");
+          document.body.classList.remove("menu-open");
+        }
+        updateCarousel();
+      });
+
+      // Add CSS for better touch feedback
+      const style = document.createElement("style");
+      style.textContent = `
+  .carousel-slide {
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  .carousel-slide:active {
+    cursor: grabbing;
+  }
+  
+  .carousel-card {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  .carousel-controls {
+    justify-content: center;
+    margin-top: 2rem;
+  }
+  
+  @media (max-width: 768px) {
+    .carousel-slide {
+      cursor: default;
+    }
+    
+    .carousel-card {
+      touch-action: pan-y;
+    }
+  }
+`;
+      document.head.appendChild(style);
+    </script>
   </body>
 </html>
