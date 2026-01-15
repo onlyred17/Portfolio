@@ -560,6 +560,10 @@ body::after {
     rgba(255, 255, 255, 0.9) 0%,
     rgba(240, 247, 255, 0.9) 100%
   );
+  width: 100vw; /* Ensure full viewport width */
+  margin-left: calc(-50vw + 50%); /* Center alignment trick */
+  left: 0;
+  right: 0;
 }
 
 .hero-content {
@@ -567,6 +571,8 @@ body::after {
   text-align: center;
   z-index: 2;
   position: relative;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .profile-container {
